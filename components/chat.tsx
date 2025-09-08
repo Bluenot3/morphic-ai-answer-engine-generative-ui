@@ -28,6 +28,24 @@ interface ChatSection {
   assistantMessages: Message[]
 }
 
+// ---------- Helper to normalize Vercel AI SDK message content ----------
+function contentToText(content: unknown): string {
+  if (typeof content === 'string') return content
+  if (Array.isArray(content)) {
+    return content
+      .map((part: any) => {
+        if (!part) return ''
+        if (typeof part === 'string') return part
+        if (typeof part.text === 'string') return part.text
+        if (typeof part.content === 'string') return part.content
+        return ''
+      })
+      .join('\n')
+  }
+  return ''
+}
+// ----------------------------------------------------------------------
+
 export function Chat({
   id,
   savedMessages = [],
@@ -68,7 +86,7 @@ export function Chat({
     onError: error => {
       toast.error(`Error in chat: ${error.message}`)
     },
-    sendExtraMessageFields: false, // Disable extra message fields,
+    sendExtraMessageFields: false,
     experimental_throttle: 100
   })
 
@@ -81,7 +99,6 @@ export function Chat({
 
     for (const message of messages) {
       if (message.role === 'user') {
-        // Start a new section when a user message is found
         if (currentSection) {
           result.push(currentSection)
         }
@@ -91,13 +108,10 @@ export function Chat({
           assistantMessages: []
         }
       } else if (currentSection && message.role === 'assistant') {
-        // Add assistant message to the current section
         currentSection.assistantMessages.push(message)
       }
-      // Ignore other role types like 'system' for now
     }
 
-    // Add the last section if exists
     if (currentSection) {
       result.push(currentSection)
     }
@@ -112,7 +126,7 @@ export function Chat({
 
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = container
-      const threshold = 50 // threshold in pixels
+      const threshold = 50
       if (scrollHeight - scrollTop - clientHeight < threshold) {
         setIsAtBottom(true)
       } else {
@@ -121,7 +135,7 @@ export function Chat({
     }
 
     container.addEventListener('scroll', handleScroll, { passive: true })
-    handleScroll() // Set initial state
+    handleScroll()
 
     return () => container.removeEventListener('scroll', handleScroll)
   }, [])
@@ -131,7 +145,6 @@ export function Chat({
     if (sections.length > 0) {
       const lastMessage = messages[messages.length - 1]
       if (lastMessage && lastMessage.role === 'user') {
-        // If the last message is from user, find the corresponding section
         const sectionId = lastMessage.id
         requestAnimationFrame(() => {
           const sectionElement = document.getElementById(`section-${sectionId}`)
@@ -170,7 +183,6 @@ export function Chat({
       const messagesUpToEdited = messages.slice(0, messageIndex + 1)
 
       setMessages(messagesUpToEdited)
-
       setData(undefined)
 
       await reload({
@@ -209,31 +221,14 @@ export function Chat({
     handleSubmit(e)
   }
 
-// ====== NEW: helpers for features 1,4, and artifacts ======
+  // ====== NEW: helpers for features 1,4, and artifacts ======
 
-function contentToText(content: unknown): string {
-  if (typeof content === 'string') return content
-  if (Array.isArray(content)) {
-    return content
-      .map((part: any) => {
-        if (!part) return ''
-        if (typeof part === 'string') return part
-        // Vercel AI SDK text parts typically look like { type: 'text', text: string }
-        if (typeof part.text === 'string') return part.text
-        if (typeof part.content === 'string') return part.content
-        return ''
-      })
-      .join('\n')
-  }
-  return ''
-}
-// Latest assistant content (used by CopyAnswer + ArtifactDock)
-const lastAssistant = useMemo(
-  () => [...messages].reverse().find(m => m.role === 'assistant'),
-  [messages]
-)
-const lastAssistantText = contentToText(lastAssistant?.content)
-
+  // Latest assistant content (used by CopyAnswer + ArtifactDock)
+  const lastAssistant = useMemo(
+    () => [...messages].reverse().find(m => m.role === 'assistant'),
+    [messages]
+  )
+  const lastAssistantText = contentToText(lastAssistant?.content)
 
   // For Auto-Artifact Dock: buffer full assistant text (reuse latest assistant text)
   const [artifactText, setArtifactText] = useState('')
@@ -260,12 +255,7 @@ const lastAssistantText = contentToText(lastAssistant?.content)
 
   function rerunLastUserWithModel(modelId: string) {
     const lastUser = [...messages].reverse().find(m => m.role === 'user')
-    const content =
-      typeof lastUser?.content === 'string'
-        ? lastUser?.content
-        : Array.isArray(lastUser?.content)
-        ? lastUser?.content.map((c: any) => (typeof c === 'string' ? c : c?.text ?? '')).join('\n')
-        : ''
+    const content = contentToText(lastUser?.content)
 
     if (!content) return
     setSelectedModelCookie(modelId)
@@ -275,7 +265,6 @@ const lastAssistantText = contentToText(lastAssistant?.content)
   // Quick Prompts integration
   function handleQuickPromptInsert(t: string) {
     const next = input ? `${input} ${t}` : t
-    // synthesize event for handleInputChange
     handleInputChange({
       target: { value: next }
     } as unknown as React.ChangeEvent<HTMLInputElement>)
@@ -294,7 +283,9 @@ const lastAssistantText = contentToText(lastAssistant?.content)
       {/* NEW: Top tools bar (latest assistant actions) */}
       {lastAssistantText && (
         <div className="sticky top-0 z-20 mx-2 mb-2 mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2 py-2 backdrop-blur">
-          <span className="text-[11px] uppercase tracking-wide text-white/50">Answer Tools</span>
+          <span className="text-[11px] uppercase tracking-wide text-white/50">
+            Answer Tools
+          </span>
           <CopyAnswer text={lastAssistantText} />
           <RerunWithModel onRun={(id) => rerunLastUserWithModel(id)} />
         </div>
