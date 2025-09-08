@@ -3,10 +3,10 @@
 import Image from 'next/image'
 import React from 'react'
 
-import { User } from '@supabase/supabase-js'
+import type { User } from '@supabase/supabase-js'
 
-import { cn } from '@/lib/utils'
 import { useSidebar } from '@/components/ui/sidebar'
+import { cn } from '@/lib/utils'
 
 import GuestMenu from './guest-menu'
 import UserMenu from './user-menu'
