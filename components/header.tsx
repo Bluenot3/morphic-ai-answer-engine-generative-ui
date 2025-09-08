@@ -27,9 +27,9 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
     >
       {/* Left: Glowing Z + Title */}
       <div className="flex items-center gap-3">
-        {/* Prefer renaming your file to /public/zen-logo.png. If you keep spaces, encode them below */}
+        {/* Static asset from /public (case-sensitive!) */}
         <img
-          src="/ZEN%20AI%20.png" 
+          src="/ZENAI.png"
           alt="ZEN Edge"
           width={36}
           height={36}
@@ -45,7 +45,7 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
         </div>
       </div>
 
-      {/* Right: capability chips + auth */}
+      {/* Right: capability chips + auth menus */}
       <div className="flex items-center gap-4">
         <div className="hidden md:flex items-center gap-2">
           <span className="chip">Multi-Model</span>
