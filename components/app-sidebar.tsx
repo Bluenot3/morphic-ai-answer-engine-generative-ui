@@ -22,21 +22,34 @@ import { IconLogo } from './ui/icons'
 
 export default function AppSidebar() {
   return (
-    <Sidebar side="left" variant="sidebar" collapsible="offcanvas">
-      <SidebarHeader className="flex flex-row justify-between items-center">
+    <Sidebar
+      side="left"
+      variant="sidebar"
+      collapsible="offcanvas"
+      className="bg-black/40 backdrop-blur-xl border-r border-white/10"
+    >
+      <SidebarHeader className="flex flex-row justify-between items-center bg-white/5 backdrop-blur border-b border-white/10">
         <Link href="/" className="flex items-center gap-2 px-2 py-3">
-          <IconLogo className={cn('size-5')} />
-          <span className="font-semibold text-sm">Morphic</span>
+          <IconLogo className={cn('size-5 text-emerald-400 drop-shadow-[0_0_6px_rgba(16,185,129,0.5)]')} />
+          <span
+            className={cn(
+              'font-semibold text-sm',
+              'bg-gradient-to-r from-emerald-300 via-teal-200 to-white bg-clip-text text-transparent',
+              'drop-shadow-[0_0_10px_rgba(16,185,129,0.25)]'
+            )}
+          >
+            ZEN Edge
+          </span>
         </Link>
         <SidebarTrigger />
       </SidebarHeader>
-      <SidebarContent className="flex flex-col px-2 py-4 h-full">
+      <SidebarContent className="flex flex-col px-2 py-4 h-full bg-black/30 backdrop-blur-sm">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <Link href="/" className="flex items-center gap-2">
-                <Plus className="size-4" />
-                <span>New</span>
+                <Plus className="size-4 text-emerald-300" />
+                <span className="text-white/90">New</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -47,7 +60,7 @@ export default function AppSidebar() {
           </Suspense>
         </div>
       </SidebarContent>
-      <SidebarRail />
+      <SidebarRail className="bg-black/30 backdrop-blur-sm border-l border-white/10" />
     </Sidebar>
   )
 }
