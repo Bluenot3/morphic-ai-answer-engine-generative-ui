@@ -21,24 +21,35 @@ const fontSans = FontSans({
   variable: '--font-sans'
 })
 
-const title = 'Morphic'
+/** ZEN Edge branding */
+const title = 'ZEN Edge'
 const description =
-  'A fully open-source AI-powered answer engine with a generative UI.'
+  'Search-grounded, multi-model AI answers. Built on Vercel AI, tuned for ZEN.'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://morphic.sh'),
+  // Update to your live domain if different
+  metadataBase: new URL('https://arena.zenai.world'),
   title,
   description,
+  themeColor: '#10B981', // ZEN emerald
   openGraph: {
     title,
-    description
+    description,
+    url: 'https://arena.zenai.world',
+    siteName: 'ZEN Edge',
+    images: [
+      { url: '/zen-edge-hero.png', width: 1200, height: 630, alt: 'ZEN Edge' }
+    ],
+    type: 'website'
   },
   twitter: {
     title,
     description,
     card: 'summary_large_image',
-    creator: '@miiura'
-  }
+    images: ['/zen-edge-hero.png']
+    // creator: '@zenai' // optional: set your handle
+  },
+  icons: { icon: '/favicon.ico' } // safe if you have one; otherwise remove
 }
 
 export const viewport: Viewport = {
@@ -70,9 +81,29 @@ export default async function RootLayout({
       <body
         className={cn(
           'min-h-screen flex flex-col font-sans antialiased',
+          // Powerful, state-of-the-art but non-breaking global look:
+          // cinematic gradient + crisp white text + emerald selection highlight
+          'bg-gradient-to-b from-black via-slate-950 to-black text-white selection:bg-emerald-500/30 selection:text-white',
           fontSans.variable
         )}
       >
+        {/* Subtle ambient effects (purely visual; won’t touch layout) */}
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-0 -z-10 [background-image:radial-gradient(50%_40%_at_50%_0%,rgba(16,185,129,0.20),transparent_60%)]"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-0 -z-10 [mask-image:radial-gradient(50%_50%_at_50%_50%,black,transparent)]"
+        />
+
+        {/* Tasteful capability badge (can remove anytime) */}
+        <div className="pointer-events-none fixed inset-x-0 top-0 z-40 flex justify-center">
+          <div className="pointer-events-auto mt-4 rounded-full border border-emerald-500/30 bg-black/60 px-3 py-1 text-[11px] uppercase tracking-wide text-emerald-300 backdrop-blur">
+            ZEN Edge • Multi-Model • Search-Grounded • Edge Streaming
+          </div>
+        </div>
+
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
