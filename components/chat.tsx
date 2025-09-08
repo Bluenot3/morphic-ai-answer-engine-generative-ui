@@ -21,14 +21,7 @@ import { cn } from '@/lib/utils'
 import { ChatMessages } from './chat-messages'
 import { ChatPanel } from './chat-panel'
 
-// Define section structure
-interface ChatSection {
-  id: string // User message ID
-  userMessage: Message
-  assistantMessages: Message[]
-}
-
-// ---------- Helper to normalize Vercel AI SDK message content ----------
+// ---------------- Helpers ----------------
 function contentToText(content: unknown): string {
   if (typeof content === 'string') return content
   if (Array.isArray(content)) {
@@ -44,7 +37,49 @@ function contentToText(content: unknown): string {
   }
   return ''
 }
-// ----------------------------------------------------------------------
+
+function isBuildIntent(t: string) {
+  const s = (t || '').toLowerCase()
+  return (
+    /\b(build|prototype|make|create|scaffold|generate)\b/.test(s) &&
+    /\b(app|page|website|component|widget|frontend|ui|dashboard)\b/.test(s)
+  )
+}
+
+const BUILD_OUTPUT_SPEC = `
+You are a code generator. When the user asks for an app, page, UI, component, or dashboard, return **only one** fenced code block, no commentary.
+
+Preferred formats (choose one based on user ask):
+- \`\`\`html
+...full standalone HTML (includes <style> & inline JS if needed)...
+\`\`\`
+- \`\`\`tsx
+...React component code (self-contained, renderable)...
+\`\`\`
+- \`\`\`jsx
+...React component code...
+\`\`\`
+
+Rules:
+- Self-contained. Include minimal CSS (Tailwind-like classes are fine if used), or inline <style>.
+- Avoid external imports unless absolutely necessary; prefer pure HTML/JS/CSS.
+- If the user asks for charts, also include a fenced \`\`\`json\`\`\` block with:
+  {
+    "chart": { "type": "bar|line|pie|doughnut", "data": { ... }, "options": { ... } }
+  }
+  The viewer will auto-render Chart.js from this JSON.
+- If the user asks for a table or grid, you may include a fenced \`\`\`json\`\`\` block with:
+  { "table": { "columns": ["ColA","ColB",...], "rows": [ ["a","b"], ... ] } }
+
+Absolutely no prose outside the fenced code (or JSON) blocks.
+`
+// -------------- End Helpers --------------
+
+interface ChatSection {
+  id: string // User message ID
+  userMessage: Message
+  assistantMessages: Message[]
+}
 
 export function Chat({
   id,
@@ -76,9 +111,7 @@ export function Chat({
   } = useChat({
     initialMessages: savedMessages,
     id: CHAT_ID,
-    body: {
-      id
-    },
+    body: { id },
     onFinish: () => {
       window.history.replaceState({}, '', `/search/${id}`)
       window.dispatchEvent(new CustomEvent('chat-history-updated'))
@@ -92,63 +125,44 @@ export function Chat({
 
   const isLoading = status === 'submitted' || status === 'streaming'
 
-  // Convert messages array to sections array
+  // Sections (user message + its assistant replies)
   const sections = useMemo<ChatSection[]>(() => {
     const result: ChatSection[] = []
-    let currentSection: ChatSection | null = null
-
-    for (const message of messages) {
-      if (message.role === 'user') {
-        if (currentSection) {
-          result.push(currentSection)
-        }
-        currentSection = {
-          id: message.id,
-          userMessage: message,
-          assistantMessages: []
-        }
-      } else if (currentSection && message.role === 'assistant') {
-        currentSection.assistantMessages.push(message)
+    let current: ChatSection | null = null
+    for (const m of messages) {
+      if (m.role === 'user') {
+        if (current) result.push(current)
+        current = { id: m.id, userMessage: m, assistantMessages: [] }
+      } else if (current && m.role === 'assistant') {
+        current.assistantMessages.push(m)
       }
     }
-
-    if (currentSection) {
-      result.push(currentSection)
-    }
-
+    if (current) result.push(current)
     return result
   }, [messages])
 
-  // Detect if scroll container is at the bottom
+  // Scroll state
   useEffect(() => {
-    const container = scrollContainerRef.current
-    if (!container) return
-
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = container
-      const threshold = 50
-      if (scrollHeight - scrollTop - clientHeight < threshold) {
-        setIsAtBottom(true)
-      } else {
-        setIsAtBottom(false)
-      }
+    const el = scrollContainerRef.current
+    if (!el) return
+    const onScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = el
+      setIsAtBottom(scrollHeight - scrollTop - clientHeight < 50)
     }
-
-    container.addEventListener('scroll', handleScroll, { passive: true })
-    handleScroll()
-
-    return () => container.removeEventListener('scroll', handleScroll)
+    el.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
+    return () => el.removeEventListener('scroll', onScroll)
   }, [])
 
-  // Scroll to the section when a new user message is sent
+  // Scroll to new user section
   useEffect(() => {
     if (sections.length > 0) {
-      const lastMessage = messages[messages.length - 1]
-      if (lastMessage && lastMessage.role === 'user') {
-        const sectionId = lastMessage.id
+      const last = messages[messages.length - 1]
+      if (last?.role === 'user') {
+        const sectionId = last.id
         requestAnimationFrame(() => {
-          const sectionElement = document.getElementById(`section-${sectionId}`)
-          sectionElement?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          const sectionEl = document.getElementById(`section-${sectionId}`)
+          sectionEl?.scrollIntoView({ behavior: 'smooth', block: 'start' })
         })
       }
     }
@@ -159,87 +173,78 @@ export function Chat({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
-  const onQuerySelect = (query: string) => {
-    append({
-      role: 'user',
-      content: query
-    })
+  const onQuerySelect = (q: string) => {
+    append({ role: 'user', content: q })
   }
 
-  const handleUpdateAndReloadMessage = async (
-    messageId: string,
-    newContent: string
-  ) => {
-    setMessages(currentMessages =>
-      currentMessages.map(msg =>
-        msg.id === messageId ? { ...msg, content: newContent } : msg
-      )
-    )
+  const handleUpdateAndReloadMessage = async (messageId: string, newContent: string) => {
+    setMessages(curr => curr.map(msg => (msg.id === messageId ? { ...msg, content: newContent } : msg)))
 
     try {
-      const messageIndex = messages.findIndex(msg => msg.id === messageId)
-      if (messageIndex === -1) return
-
-      const messagesUpToEdited = messages.slice(0, messageIndex + 1)
-
-      setMessages(messagesUpToEdited)
+      const idx = messages.findIndex(msg => msg.id === messageId)
+      if (idx === -1) return
+      const upto = messages.slice(0, idx + 1)
+      setMessages(upto)
       setData(undefined)
-
-      await reload({
-        body: {
-          chatId: id,
-          regenerate: true
-        }
-      })
+      await reload({ body: { chatId: id, regenerate: true } })
     } catch (error) {
       console.error('Failed to reload after message update:', error)
       toast.error(`Failed to reload conversation: ${(error as Error).message}`)
     }
   }
 
-  const handleReloadFrom = async (
-    messageId: string,
-    options?: ChatRequestOptions
-  ) => {
-    const messageIndex = messages.findIndex(m => m.id === messageId)
-    if (messageIndex !== -1) {
-      const userMessageIndex = messages
-        .slice(0, messageIndex)
-        .findLastIndex(m => m.role === 'user')
-      if (userMessageIndex !== -1) {
-        const trimmedMessages = messages.slice(0, userMessageIndex + 1)
-        setMessages(trimmedMessages)
+  const handleReloadFrom = async (messageId: string, options?: ChatRequestOptions) => {
+    const idx = messages.findIndex(m => m.id === messageId)
+    if (idx !== -1) {
+      const userIdx = messages.slice(0, idx).findLastIndex(m => m.role === 'user')
+      if (userIdx !== -1) {
+        const trimmed = messages.slice(0, userIdx + 1)
+        setMessages(trimmed)
         return await reload(options)
       }
     }
     return await reload(options)
   }
 
+  // --- Submit override to enforce buildable artifacts ---
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setData(undefined)
+
+    const userText = input?.toString() ?? ''
+    if (isBuildIntent(userText)) {
+      const content = `${userText}\n\n--- OUTPUT SPEC ---\n${BUILD_OUTPUT_SPEC}`
+      append({ role: 'user', content })
+      return
+    }
     handleSubmit(e)
   }
+  // ------------------------------------------------------
 
-  // ====== NEW: helpers for features 1,4, and artifacts ======
-
-  // Latest assistant content (used by CopyAnswer + ArtifactDock)
+  // Latest assistant text (for Copy + Artifact)
   const lastAssistant = useMemo(
     () => [...messages].reverse().find(m => m.role === 'assistant'),
     [messages]
   )
   const lastAssistantText = contentToText(lastAssistant?.content)
 
-  // For Auto-Artifact Dock: buffer full assistant text (reuse latest assistant text)
+  // Latest user text (for dynamic chips)
+  const lastUser = useMemo(
+    () => [...messages].reverse().find(m => m.role === 'user'),
+    [messages]
+  )
+  const lastUserText = contentToText(lastUser?.content)
+
+  // Artifact buffer
   const [artifactText, setArtifactText] = useState('')
   useEffect(() => {
     setArtifactText(lastAssistantText || '')
   }, [lastAssistantText])
 
-  // Re-run with another model: set cookie (backend reads 'selectedModel' from cookies)
+  // Re-run with another model via cookie + resend last user
   function setSelectedModelCookie(modelId: string) {
     try {
-      const cookiePayload = {
+      const payload = {
         id: modelId,
         name: modelId,
         provider: '',
@@ -247,35 +252,22 @@ export function Chat({
         enabled: true,
         toolCallType: 'native'
       }
-      document.cookie = `selectedModel=${encodeURIComponent(
-        JSON.stringify(cookiePayload)
-      )}; path=/; max-age=86400`
+      document.cookie = `selectedModel=${encodeURIComponent(JSON.stringify(payload))}; path=/; max-age=86400`
     } catch {}
   }
 
   function rerunLastUserWithModel(modelId: string) {
-    const lastUser = [...messages].reverse().find(m => m.role === 'user')
-    const content = contentToText(lastUser?.content)
-
+    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')
+    const content = contentToText(lastUserMsg?.content)
     if (!content) return
     setSelectedModelCookie(modelId)
     append({ role: 'user', content })
   }
-const lastUser = useMemo(
-  () => [...messages].reverse().find(m => m.role === 'user'),
-  [messages]
-)
-const lastUserText = contentToText(lastUser?.content)
 
-  // Quick Prompts integration
   function handleQuickPromptInsert(t: string) {
     const next = input ? `${input} ${t}` : t
-    handleInputChange({
-      target: { value: next }
-    } as unknown as React.ChangeEvent<HTMLInputElement>)
+    handleInputChange({ target: { value: next } } as unknown as React.ChangeEvent<HTMLInputElement>)
   }
-
-  // ====== END NEW ======
 
   return (
     <div
@@ -285,12 +277,10 @@ const lastUserText = contentToText(lastUser?.content)
       )}
       data-testid="full-chat"
     >
-      {/* NEW: Top tools bar (latest assistant actions) */}
+      {/* Top tools bar */}
       {lastAssistantText && (
         <div className="sticky top-0 z-20 mx-2 mb-2 mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2 py-2 backdrop-blur">
-          <span className="text-[11px] uppercase tracking-wide text-white/50">
-            Answer Tools
-          </span>
+          <span className="text-[11px] uppercase tracking-wide text-white/50">Answer Tools</span>
           <CopyAnswer text={lastAssistantText} />
           <RerunWithModel onRun={(id) => rerunLastUserWithModel(id)} />
         </div>
@@ -308,7 +298,7 @@ const lastUserText = contentToText(lastUser?.content)
         reload={handleReloadFrom}
       />
 
-      {/* NEW: Quick Prompts above the composer */}
+      {/* Dynamic chips (based on lastUserText) */}
       <div className="px-2">
         <QuickPrompts lastUserText={lastUserText} onPick={handleQuickPromptInsert} />
       </div>
@@ -328,12 +318,10 @@ const lastUserText = contentToText(lastUser?.content)
         scrollContainerRef={scrollContainerRef}
       />
 
-      {/* NEW: Input metrics under the composer */}
       <div className="px-2">
         <InputMetrics text={input || ''} model="openai/gpt-4o-mini" />
       </div>
 
-      {/* NEW: Auto-Artifact Dock (opens when buildable code appears) */}
       <AutoArtifactDock content={artifactText} />
     </div>
   )
