@@ -2,25 +2,22 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 
+import type { ChatRequestOptions } from 'ai'
+import type { Message } from 'ai/react'
 import { useChat } from '@ai-sdk/react'
-import { ChatRequestOptions } from 'ai'
-import { Message } from 'ai/react'
 import { toast } from 'sonner'
 
+import AutoArtifactDock from '@/components/artifact/auto-artifact-dock'
+import CopyAnswer from '@/components/CopyAnswer'
+import InputMetrics from '@/components/InputMetrics'
+import QuickPrompts from '@/components/QuickPrompts'
+import RerunWithModel from '@/components/RerunWithModel'
 import { CHAT_ID } from '@/lib/constants'
-import { Model } from '@/lib/types/models'
+import type { Model } from '@/lib/types/models'
 import { cn } from '@/lib/utils'
 
 import { ChatMessages } from './chat-messages'
 import { ChatPanel } from './chat-panel'
-
-// NEW UI helpers
-/* eslint-disable simple-import-sort/imports */
-import CopyAnswer from '@/components/CopyAnswer'
-import RerunWithModel from '@/components/RerunWithModel'
-import InputMetrics from '@/components/InputMetrics'
-import QuickPrompts from '@/components/QuickPrompts'
-import AutoArtifactDock from '@/components/artifact/auto-artifact-dock'
 
 // Define section structure
 interface ChatSection {
@@ -224,13 +221,13 @@ export function Chat({
       ? lastAssistant?.content.map((c: any) => (typeof c === 'string' ? c : c?.text ?? '')).join('\n')
       : ''
 
-  // For Auto-Artifact Dock: buffer full assistant text (we reuse the latest assistant text)
+  // For Auto-Artifact Dock: buffer full assistant text (reuse latest assistant text)
   const [artifactText, setArtifactText] = useState('')
   useEffect(() => {
     setArtifactText(lastAssistantText || '')
   }, [lastAssistantText])
 
-  // Re-run with another model: set cookie (your backend reads 'selectedModel' from cookies)
+  // Re-run with another model: set cookie (backend reads 'selectedModel' from cookies)
   function setSelectedModelCookie(modelId: string) {
     try {
       const cookiePayload = {
