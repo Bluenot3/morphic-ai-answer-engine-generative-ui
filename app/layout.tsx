@@ -18,7 +18,7 @@ import './globals.css'
 
 const fontSans = FontSans({
   subsets: ['latin'],
-  variable: '--font-sans'
+  variable: '--font-sans',
 })
 
 /** ZEN Edge branding */
@@ -31,36 +31,38 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://arena.zenai.world'),
   title,
   description,
-  themeColor: '#10B981', // ZEN emerald
   openGraph: {
     title,
     description,
     url: 'https://arena.zenai.world',
     siteName: 'ZEN Edge',
     images: [
-      { url: '/zen-edge-hero.png', width: 1200, height: 630, alt: 'ZEN Edge' }
+      // Use your uploaded asset from /public
+      { url: '/ZENAI.png', width: 1200, height: 630, alt: 'ZEN Edge' },
     ],
-    type: 'website'
+    type: 'website',
   },
   twitter: {
     title,
     description,
     card: 'summary_large_image',
-    images: ['/zen-edge-hero.png']
+    images: ['/ZENAI.png'],
     // creator: '@zenai' // optional: set your handle
   },
-  icons: { icon: '/favicon.ico' } // safe if you have one; otherwise remove
+  icons: { icon: '/favicon.ico' }, // safe if you have one; otherwise remove
 }
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   minimumScale: 1,
-  maximumScale: 1
+  maximumScale: 1,
+  // Next.js 15: themeColor belongs in viewport (not metadata)
+  themeColor: '#10B981', // ZEN emerald
 }
 
 export default async function RootLayout({
-  children
+  children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
@@ -71,7 +73,7 @@ export default async function RootLayout({
   if (supabaseUrl && supabaseAnonKey) {
     const supabase = await createClient()
     const {
-      data: { user: supabaseUser }
+      data: { user: supabaseUser },
     } = await supabase.auth.getUser()
     user = supabaseUser
   }
@@ -84,7 +86,7 @@ export default async function RootLayout({
           // Powerful, state-of-the-art but non-breaking global look:
           // cinematic gradient + crisp white text + emerald selection highlight
           'bg-gradient-to-b from-black via-slate-950 to-black text-white selection:bg-emerald-500/30 selection:text-white',
-          fontSans.variable
+          fontSans.variable,
         )}
       >
         {/* Subtle ambient effects (purely visual; won’t touch layout) */}
