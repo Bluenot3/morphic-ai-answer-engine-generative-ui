@@ -35,18 +35,15 @@
     --radius: 0.5rem;
 
     --chart-1: 12 76% 61%;
-
     --chart-2: 173 58% 39%;
-
     --chart-3: 197 37% 24%;
-
     --chart-4: 43 74% 66%;
-
     --chart-5: 27 87% 67%;
 
     --accent-blue: 210 100% 97%;
     --accent-blue-foreground: 210 100% 50%;
     --accent-blue-border: 210 100% 90%;
+
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -85,6 +82,7 @@
     --border: 0 0% 14.9%;
     --input: 0 0% 14.9%;
     --ring: 0 0% 14.9%;
+
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
@@ -94,6 +92,7 @@
     --accent-blue: 210 100% 10%;
     --accent-blue-foreground: 210 100% 80%;
     --accent-blue-border: 210 100% 25%;
+
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -111,5 +110,40 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Global text selection highlight (ZEN emerald) */
+  ::selection {
+    background-color: rgba(16, 185, 129, 0.3); /* emerald-500/30 */
+    color: #fff;
+  }
+}
+
+/* ========= ZEN Edge Enhancements ========= */
+
+/* Glowing Z logo */
+@keyframes zenGlow {
+  0%   { filter: drop-shadow(0 0 6px rgba(16,185,129,.45)); }
+  50%  { filter: drop-shadow(0 0 16px rgba(16,185,129,.90)); }
+  100% { filter: drop-shadow(0 0 6px rgba(16,185,129,.45)); }
+}
+.logo-glow {
+  animation: zenGlow 3s ease-in-out infinite;
+  will-change: filter;
+}
+
+/* Optional: reusable glass surfaces for panels/cards/headers */
+@layer components {
+  .glass-surface {
+    @apply rounded-2xl border border-white/10 bg-white/5 backdrop-blur;
+  }
+  .glass-header {
+    @apply sticky top-0 z-30 backdrop-blur bg-black/30 border-b border-white/10;
+  }
+  .chip {
+    @apply rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] text-emerald-300 uppercase tracking-wide;
+  }
+  .action-primary {
+    @apply rounded-xl px-3 py-1.5 text-sm font-medium text-black bg-emerald-500 hover:bg-emerald-600 shadow-[0_0_32px_rgba(16,185,129,.25)];
   }
 }
