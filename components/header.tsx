@@ -1,11 +1,12 @@
+/* eslint-disable simple-import-sort/imports */
 'use client'
 
 import React from 'react'
 
-import { User } from '@supabase/supabase-js'
+import type { User } from '@supabase/supabase-js'
 
-import { cn } from '@/lib/utils'
 import { useSidebar } from '@/components/ui/sidebar'
+import { cn } from '@/lib/utils'
 
 import GuestMenu from './guest-menu'
 import UserMenu from './user-menu'
@@ -16,6 +17,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ user }) => {
   const { open } = useSidebar()
+
   return (
     <header
       className={cn(
@@ -24,8 +26,8 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
         'w-full'
       )}
     >
-      {/* This div can be used for a logo or title on the left if needed */}
-      <div></div>
+      {/* Left slot for logo/title if you add one later */}
+      <div />
 
       <div className="flex items-center gap-2">
         {user ? <UserMenu user={user} /> : <GuestMenu />}
