@@ -261,6 +261,11 @@ export function Chat({
     setSelectedModelCookie(modelId)
     append({ role: 'user', content })
   }
+const lastUser = useMemo(
+  () => [...messages].reverse().find(m => m.role === 'user'),
+  [messages]
+)
+const lastUserText = contentToText(lastUser?.content)
 
   // Quick Prompts integration
   function handleQuickPromptInsert(t: string) {
@@ -305,7 +310,7 @@ export function Chat({
 
       {/* NEW: Quick Prompts above the composer */}
       <div className="px-2">
-        <QuickPrompts onPick={handleQuickPromptInsert} />
+        <QuickPrompts lastUserText={lastUserText} onPick={handleQuickPromptInsert} />
       </div>
 
       <ChatPanel
