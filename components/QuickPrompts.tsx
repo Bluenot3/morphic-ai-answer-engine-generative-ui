@@ -1,11 +1,5 @@
 'use client'
 
-/**
- * Dynamic Quick Prompts
- * - Adapts chips to the latest user prompt (build/research/writing/data/general)
- * - No backend changes. Pure client logic.
- */
-
 type Props = {
   lastUserText: string
   onPick: (text: string) => void
@@ -19,14 +13,13 @@ function detectIntent(text: string) {
     /\b(app|page|website|component|widget|frontend|ui|dashboard)\b/.test(t)
 
   const isResearch =
-    /\b(research|investigate|analyze|compare|explain|summarize|what|why|how)\b/.test(t) ||
-    /\b(links|sources|citations|web results|tavily)\b/.test(t)
+    /\b(research|investigate|analyze|compare|summarize|sources|citations|tavily|web)\b/.test(t)
 
   const isWriting =
-    /\b(email|post|tweet|thread|press release|cover letter|story|script|copy)\b/.test(t)
+    /\b(email|post|tweet|thread|press release|cover letter|story|script|copy|landing copy)\b/.test(t)
 
   const isData =
-    /\b(csv|json|table|chart|graph|plot|data|dataset|columns|rows)\b/.test(t)
+    /\b(csv|json|table|chart|graph|plot|data|dataset|columns|rows|metrics|kpi)\b/.test(t)
 
   return { isBuild, isResearch, isWriting, isData }
 }
@@ -38,18 +31,18 @@ function suggestionsFor(text: string) {
     return {
       primary: [
         'Add a neuromorphic UI with soft shadows',
-        'Make it responsive for mobile + desktop',
-        'Use glassmorphism with subtle blurs',
+        'Apply glassmorphism with subtle blur/background gradient',
+        'Make it fully responsive (mobile-first)',
         'Dark theme with emerald accent tokens',
-        'Add a sticky header + footer CTA',
-        'Refactor into components with clear props'
+        'Accessibility: roles, labels, keyboard navigation',
+        'Split into reusable components with typed props'
       ],
       secondary: [
-        'Generate unit tests for critical UI pieces',
-        'Inline docs: comment tricky parts',
-        'Export a single self-contained HTML for preview',
-        'Add accessibility (ARIA roles, keyboard nav)',
-        'Optimize for Lighthouse performance'
+        'Inline docs for tricky logic',
+        'Generate unit tests for components',
+        'Bundle a standalone preview (single HTML)',
+        'Optimize Lighthouse (performance + SEO)',
+        'Add a sticky header + footer CTA'
       ]
     }
   }
@@ -57,17 +50,16 @@ function suggestionsFor(text: string) {
   if (isResearch) {
     return {
       primary: [
-        'Give a 5-bullet executive summary',
-        'Create a pros/cons table with citations',
-        'Extract key numbers & dates',
-        'Add source links with one-line annotations',
-        'Propose 3 actionable next steps'
+        'Executive summary in 5 bullets with citations',
+        'Pros/cons table with source refs',
+        'Key metrics & dates extracted',
+        'Three actionable recommendations',
+        'Highlight uncertainties & missing data'
       ],
       secondary: [
-        'Rewrite as a 90-second brief',
-        'Highlight uncertainties and missing data',
-        'Add a timeline with milestones',
-        'Generate a glossary of terms'
+        'Create a timeline with milestones',
+        'Glossary of key terms',
+        'Risk matrix with mitigations'
       ]
     }
   }
@@ -75,17 +67,16 @@ function suggestionsFor(text: string) {
   if (isWriting) {
     return {
       primary: [
-        'Outline first, then write',
-        'Executive tone, concise',
-        'Add a strong CTA at the end',
-        'Give 3 headline options',
-        'Add a TL;DR at the top'
+        'Outline first, then draft',
+        'Executive tone, concise and direct',
+        'Add a strong call-to-action',
+        'Provide 3 headline options',
+        'Include a 1-sentence TL;DR'
       ],
       secondary: [
-        'Rewrite for 5th-grade clarity',
-        'Punchier, more active voice',
+        'Rewrite for clarity and brevity',
         'Convert to a 5-tweet thread',
-        'Add an “objections & replies” section'
+        'Add objections & replies'
       ]
     }
   }
@@ -93,34 +84,33 @@ function suggestionsFor(text: string) {
   if (isData) {
     return {
       primary: [
-        'Turn into a clean table',
-        'Make a chart with labeled axes',
-        'Find anomalies and outliers',
-        'Suggest 3 segmentations',
-        'Summarize in 5 bullets + actions'
+        'Convert to a clean table with headers',
+        'Render a chart (bar/line/pie) from this data',
+        'Identify anomalies/outliers',
+        'Suggest 3 segmentations to explore',
+        'Summarize insights + next steps'
       ],
       secondary: [
-        'Infer missing values if sensible',
-        'Compute basic stats (mean, median, p95)',
-        'Note data quality limitations',
-        'Draft SQL to recreate this result'
+        'Compute stats (mean, median, p95)',
+        'Note data quality limits',
+        'Draft SQL to reproduce result'
       ]
     }
   }
 
-  // Default: helpful general chips
+  // If no intent detected yet (e.g., first prompt), keep it pro & neutral.
   return {
     primary: [
-      'Summarize in 5 bullets',
-      'Explain like I’m 12',
-      'Pros/cons with tradeoffs',
-      'Turn into an action plan',
-      'Give 3 alternative approaches'
+      'Give a concise executive summary',
+      'List trade-offs with recommendations',
+      'Propose 3 alternative approaches',
+      'Outline risks and mitigations',
+      'Provide next steps with owners'
     ],
     secondary: [
-      'Add a one-sentence TL;DR',
-      'Highlight risks and mitigations',
-      'Rewrite for clarity and brevity'
+      'Add a 1-sentence TL;DR',
+      'Flag assumptions and unknowns',
+      'Reframe as a one-page brief'
     ]
   }
 }
@@ -144,7 +134,7 @@ export default function QuickPrompts({ lastUserText, onPick }: Props) {
           </button>
         ))}
       </div>
-      {sugg.secondary?.length ? (
+      {!!sugg.secondary?.length && (
         <div className="flex flex-wrap gap-2">
           {sugg.secondary.map((p) => (
             <button
@@ -159,7 +149,7 @@ export default function QuickPrompts({ lastUserText, onPick }: Props) {
             </button>
           ))}
         </div>
-      ) : null}
+      )}
     </div>
   )
 }
