@@ -1,6 +1,8 @@
 'use client'
 
+import Image from 'next/image'
 import React from 'react'
+
 import { User } from '@supabase/supabase-js'
 
 import { cn } from '@/lib/utils'
@@ -19,7 +21,6 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
   return (
     <header
       className={cn(
-        // sticky + glass header
         'glass-header flex justify-between items-center z-30 px-4 py-2 transition-[width] duration-200 ease-linear',
         open ? 'md:w-[calc(100%-var(--sidebar-width))]' : 'md:w-full',
         'w-full'
@@ -27,13 +28,14 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
     >
       {/* Left: Glowing Z + Title */}
       <div className="flex items-center gap-3">
-        {/* Static asset from /public (case-sensitive!) */}
-        <img
+        {/* Static asset from /public (case-sensitive) */}
+        <Image
           src="/ZENAI.png"
           alt="ZEN Edge"
           width={36}
           height={36}
           className="logo-glow rounded-md"
+          priority
         />
         <div className="flex flex-col leading-tight">
           <span className="text-[13px] uppercase tracking-[0.18em] text-emerald-300/90">
