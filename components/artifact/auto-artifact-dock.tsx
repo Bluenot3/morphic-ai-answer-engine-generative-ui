@@ -2,12 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 
-type Props = {
-  /** Full assistant text (concatenated as it streams). */
-  content: string
-  /** Optional hint: set true if the user asked to “build”, “prototype”, “landing page”, etc. */
-  openHint?: boolean
-}
+type Props = { content: string; openHint?: boolean }
 
 function extractCode(text: string) {
   const m = text.match(/```(tsx|jsx|html|js|css)?\s*([\s\S]*?)```/)
@@ -16,26 +11,37 @@ function extractCode(text: string) {
 }
 
 function toSrcDoc(lang: string, code: string) {
-  // If pure HTML, use directly; otherwise wrap into a tiny HTML shell
   if (lang === 'html') return code
   const escaped = code.replace(/<\/script>/g, '<\\/script>')
   return `<!doctype html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<style>html,body{margin:0;background:#0b0b0b;color:#fff}*,*:before,*:after{box-sizing:border-box}</style>
-</head><body>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; background: #060606; color: #fff; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
 <div id="app"></div>
 <script type="module">
 ${escaped}
 </script>
-</body></html>`
+</body>
+</html>`
 }
 
 export default function AutoArtifactDock({ content, openHint }: Props) {
   const [open, setOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<'preview' | 'code'>('preview')
   const { lang, code } = useMemo(() => extractCode(content), [content])
 
   useEffect(() => {
-    const intent = /build|prototype|component|widget|landing\s?page|web\s?app|dashboard|frontend/i.test(content)
+    const intent = /build|prototype|component|widget|landing\s?page|web\s?app|dashboard|frontend/i.test(
+      content
+    )
     if ((openHint || intent) && code && !open) setOpen(true)
   }, [content, code, open, openHint])
 
@@ -44,24 +50,35 @@ export default function AutoArtifactDock({ content, openHint }: Props) {
   const srcDoc = toSrcDoc(lang, code)
 
   return (
-    <aside className="fixed right-0 top-0 z-40 h-full w-full max-w-[560px] border-l border-white/10 bg-black/70 backdrop-blur-lg">
+    <aside
+      className="
+        fixed right-0 top-0 z-40 h-full w-full max-w-[640px]
+        border-l border-white/10
+        bg-gradient-to-b from-white/5 via-white/[0.04] to-white/[0.03]
+        backdrop-blur-2xl
+        shadow-[0_0_60px_rgba(16,185,129,0.10)]
+      "
+      role="dialog"
+      aria-label="Artifact"
+    >
+      {/* Header */}
       <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
-        <div className="text-xs text-white/70">Artifact Preview</div>
+        <div className="flex items-center gap-2">
+          <span className="inline-flex size-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.7)]" />
+          <div className="text-xs text-white/70">Artifact — {lang || 'code'}</div>
+        </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => {
-              const el = document.getElementById('artifact-tabs')
-              if (!el) return
-              const codeTab = el.querySelector('[data-tab="code"]') as HTMLButtonElement | null
-              codeTab?.click()
-            }}
+            onClick={() => setActiveTab('code')}
             className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[11px] hover:bg-white/10"
+            type="button"
           >
             View Code
           </button>
           <button
             onClick={() => setOpen(false)}
             className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[11px] hover:bg-white/10"
+            type="button"
           >
             Close
           </button>
@@ -69,49 +86,40 @@ export default function AutoArtifactDock({ content, openHint }: Props) {
       </div>
 
       {/* Tabs */}
-      <div id="artifact-tabs" className="flex border-b border-white/10">
+      <div className="flex border-b border-white/10">
         <button
-          className="peer rounded-none px-3 py-2 text-sm hover:bg-white/5 data-[active=true]:bg-white/10"
-          data-tab="preview"
-          data-active="true"
-          onClick={(e) => {
-            const p = e.currentTarget; const c = p.nextElementSibling as HTMLButtonElement
-            p.setAttribute('data-active', 'true'); c?.setAttribute('data-active', 'false')
-            document.getElementById('artifact-preview')?.classList.remove('hidden')
-            document.getElementById('artifact-code')?.classList.add('hidden')
-          }}
+          onClick={() => setActiveTab('preview')}
+          data-active={activeTab === 'preview'}
+          className="rounded-none px-3 py-2 text-sm hover:bg-white/5 data-[active=true]:bg-white/10"
+          type="button"
         >
           Preview
         </button>
         <button
-          className="rounded-none px-3 py-2 text-sm hover:bg-white/5"
-          data-tab="code"
-          onClick={(e) => {
-            const c = e.currentTarget; const p = c.previousElementSibling as HTMLButtonElement
-            c.setAttribute('data-active', 'true'); p?.setAttribute('data-active', 'false')
-            document.getElementById('artifact-code')?.classList.remove('hidden')
-            document.getElementById('artifact-preview')?.classList.add('hidden')
-          }}
+          onClick={() => setActiveTab('code')}
+          data-active={activeTab === 'code'}
+          className="rounded-none px-3 py-2 text-sm hover:bg-white/5 data-[active=true]:bg-white/10"
+          type="button"
         >
           Code
         </button>
       </div>
 
       {/* Panels */}
-      <div id="artifact-preview" className="h-[calc(100%-84px)]">
-        <iframe
-          title="Artifact"
-          className="h-full w-full border-0"
-          sandbox="allow-scripts allow-forms allow-popups allow-same-origin"
-          srcDoc={srcDoc}
-        />
-      </div>
-      <pre
-        id="artifact-code"
-        className="hidden h-[calc(100%-84px)] overflow-auto bg-black/80 p-3 text-xs text-emerald-200"
-      >
-        <code>{code}</code>
-      </pre>
+      {activeTab === 'preview' ? (
+        <div className="h-[calc(100%-84px)]">
+          <iframe
+            title="Artifact"
+            className="h-full w-full border-0"
+            sandbox="allow-scripts allow-forms allow-popups allow-same-origin"
+            srcDoc={srcDoc}
+          />
+        </div>
+      ) : (
+        <pre className="h-[calc(100%-84px)] overflow-auto bg-black/80 p-3 text-xs text-emerald-200">
+          <code>{code}</code>
+        </pre>
+      )}
     </aside>
   )
 }
