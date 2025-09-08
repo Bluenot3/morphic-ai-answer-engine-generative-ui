@@ -209,19 +209,31 @@ export function Chat({
     handleSubmit(e)
   }
 
-  // ====== NEW: helpers for features 1,4, and artifacts ======
+// ====== NEW: helpers for features 1,4, and artifacts ======
 
-  // Latest assistant content (used by CopyAnswer + ArtifactDock)
-  const lastAssistant = useMemo(
-    () => [...messages].reverse().find(m => m.role === 'assistant'),
-    [messages]
-  )
-  const lastAssistantText =
-    typeof lastAssistant?.content === 'string'
-      ? lastAssistant?.content
-      : Array.isArray(lastAssistant?.content)
-      ? lastAssistant?.content.map((c: any) => (typeof c === 'string' ? c : c?.text ?? '')).join('\n')
-      : ''
+function contentToText(content: unknown): string {
+  if (typeof content === 'string') return content
+  if (Array.isArray(content)) {
+    return content
+      .map((part: any) => {
+        if (!part) return ''
+        if (typeof part === 'string') return part
+        // Vercel AI SDK text parts typically look like { type: 'text', text: string }
+        if (typeof part.text === 'string') return part.text
+        if (typeof part.content === 'string') return part.content
+        return ''
+      })
+      .join('\n')
+  }
+  return ''
+}
+// Latest assistant content (used by CopyAnswer + ArtifactDock)
+const lastAssistant = useMemo(
+  () => [...messages].reverse().find(m => m.role === 'assistant'),
+  [messages]
+)
+const lastAssistantText = contentToText(lastAssistant?.content)
+
 
   // For Auto-Artifact Dock: buffer full assistant text (reuse latest assistant text)
   const [artifactText, setArtifactText] = useState('')
