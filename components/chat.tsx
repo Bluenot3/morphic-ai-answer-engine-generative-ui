@@ -14,6 +14,14 @@ import { cn } from '@/lib/utils'
 import { ChatMessages } from './chat-messages'
 import { ChatPanel } from './chat-panel'
 
+// NEW UI helpers
+/* eslint-disable simple-import-sort/imports */
+import CopyAnswer from '@/components/CopyAnswer'
+import RerunWithModel from '@/components/RerunWithModel'
+import InputMetrics from '@/components/InputMetrics'
+import QuickPrompts from '@/components/QuickPrompts'
+import AutoArtifactDock from '@/components/artifact/auto-artifact-dock'
+
 // Define section structure
 interface ChatSection {
   id: string // User message ID
@@ -202,6 +210,68 @@ export function Chat({
     handleSubmit(e)
   }
 
+  // ====== NEW: helpers for features 1,4, and artifacts ======
+
+  // Latest assistant content (used by CopyAnswer + ArtifactDock)
+  const lastAssistant = useMemo(
+    () => [...messages].reverse().find(m => m.role === 'assistant'),
+    [messages]
+  )
+  const lastAssistantText =
+    typeof lastAssistant?.content === 'string'
+      ? lastAssistant?.content
+      : Array.isArray(lastAssistant?.content)
+      ? lastAssistant?.content.map((c: any) => (typeof c === 'string' ? c : c?.text ?? '')).join('\n')
+      : ''
+
+  // For Auto-Artifact Dock: buffer full assistant text (we reuse the latest assistant text)
+  const [artifactText, setArtifactText] = useState('')
+  useEffect(() => {
+    setArtifactText(lastAssistantText || '')
+  }, [lastAssistantText])
+
+  // Re-run with another model: set cookie (your backend reads 'selectedModel' from cookies)
+  function setSelectedModelCookie(modelId: string) {
+    try {
+      const cookiePayload = {
+        id: modelId,
+        name: modelId,
+        provider: '',
+        providerId: '',
+        enabled: true,
+        toolCallType: 'native'
+      }
+      document.cookie = `selectedModel=${encodeURIComponent(
+        JSON.stringify(cookiePayload)
+      )}; path=/; max-age=86400`
+    } catch {}
+  }
+
+  function rerunLastUserWithModel(modelId: string) {
+    const lastUser = [...messages].reverse().find(m => m.role === 'user')
+    const content =
+      typeof lastUser?.content === 'string'
+        ? lastUser?.content
+        : Array.isArray(lastUser?.content)
+        ? lastUser?.content.map((c: any) => (typeof c === 'string' ? c : c?.text ?? '')).join('\n')
+        : ''
+
+    if (!content) return
+    setSelectedModelCookie(modelId)
+    append({ role: 'user', content })
+  }
+
+  // Quick Prompts integration
+  function handleQuickPromptInsert(t: string) {
+    const next = input ? `${input} ${t}` : t
+    // synthesize event for handleInputChange
+    handleInputChange({
+      target: { value: next }
+    } as unknown as React.ChangeEvent<HTMLInputElement>)
+  }
+
+  // ====== END NEW ======
+
   return (
     <div
       className={cn(
@@ -210,6 +280,15 @@ export function Chat({
       )}
       data-testid="full-chat"
     >
+      {/* NEW: Top tools bar (latest assistant actions) */}
+      {lastAssistantText && (
+        <div className="sticky top-0 z-20 mx-2 mb-2 mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2 py-2 backdrop-blur">
+          <span className="text-[11px] uppercase tracking-wide text-white/50">Answer Tools</span>
+          <CopyAnswer text={lastAssistantText} />
+          <RerunWithModel onRun={(id) => rerunLastUserWithModel(id)} />
+        </div>
+      )}
+
       <ChatMessages
         sections={sections}
         data={data}
@@ -221,6 +300,12 @@ export function Chat({
         onUpdateMessage={handleUpdateAndReloadMessage}
         reload={handleReloadFrom}
       />
+
+      {/* NEW: Quick Prompts above the composer */}
+      <div className="px-2">
+        <QuickPrompts onPick={handleQuickPromptInsert} />
+      </div>
+
       <ChatPanel
         input={input}
         handleInputChange={handleInputChange}
@@ -235,6 +320,14 @@ export function Chat({
         showScrollToBottomButton={!isAtBottom}
         scrollContainerRef={scrollContainerRef}
       />
+
+      {/* NEW: Input metrics under the composer */}
+      <div className="px-2">
+        <InputMetrics text={input || ''} model="openai/gpt-4o-mini" />
+      </div>
+
+      {/* NEW: Auto-Artifact Dock (opens when buildable code appears) */}
+      <AutoArtifactDock content={artifactText} />
     </div>
   )
 }
