@@ -221,12 +221,42 @@ export function Chat({
   }
   // ------------------------------------------------------
 
+  // -------- Artifact cleaning & feeding --------
+  function cleanAssistantForArtifact(s: string): string {
+    if (!s) return ''
+
+    let out = s
+
+    // Drop echoed spec prelude up to the first code fence, keep the fence
+    out = out.replace(/---\s*OUTPUT SPEC\s*---[\s\S]*?```/, '```')
+
+    // If raw HTML is present (even without fences), wrap it in ```html fences
+    const hasHtml = /<!doctype html/i.test(out) || /<html[\s>]/i.test(out)
+    if (hasHtml) {
+      const alreadyFenced =
+        /```[a-zA-Z0-9+.-]*[\s\S]*<!doctype html/i.test(out) ||
+        /```[a-zA-Z0-9+.-]*[\s\S]*<html[\s>]/i.test(out)
+      if (!alreadyFenced) {
+        const start =
+          out.search(/<!doctype html/i) !== -1
+            ? out.search(/<!doctype html/i)
+            : out.search(/<html[\s>]/i)
+        const prefix = out.slice(0, start)
+        const html = out.slice(start)
+        out = `${prefix}\n\`\`\`html\n${html}\n\`\`\`\n`
+      }
+    }
+
+    return out.trim()
+  }
+
   // Latest assistant text (for Copy + Artifact)
   const lastAssistant = useMemo(
     () => [...messages].reverse().find(m => m.role === 'assistant'),
     [messages]
   )
-  const lastAssistantText = contentToText(lastAssistant?.content)
+  const lastAssistantTextRaw = contentToText(lastAssistant?.content)
+  const lastAssistantText = cleanAssistantForArtifact(lastAssistantTextRaw)
 
   // Latest user text (for dynamic chips)
   const lastUser = useMemo(
@@ -235,11 +265,12 @@ export function Chat({
   )
   const lastUserText = contentToText(lastUser?.content)
 
-  // Artifact buffer
+  // Normalize content that feeds the artifact dock
   const [artifactText, setArtifactText] = useState('')
   useEffect(() => {
     setArtifactText(lastAssistantText || '')
   }, [lastAssistantText])
+  // --------------------------------------------
 
   // Re-run with another model via cookie + resend last user
   function setSelectedModelCookie(modelId: string) {
