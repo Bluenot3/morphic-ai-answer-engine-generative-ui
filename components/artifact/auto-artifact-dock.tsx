@@ -10,25 +10,56 @@ type ChartSpec = {
   options?: any
 }
 
+function extractLooseHtml(text: string) {
+  const s = text || ''
+  if (/<\s*!doctype/i.test(s) || /<\s*html/i.test(s)) {
+    const start =
+      s.search(/<\s*!doctype/i) !== -1 ? s.search(/<\s*!doctype/i) : s.search(/<\s*html/i)
+    return s.slice(start)
+  }
+  if (/<\s*div[^>]*>[\s\S]*<\/\s*div>/.test(s)) {
+    const body = s.match(/<\s*div[^>]*>[\s\S]*<\/\s*div>/)?.[0] ?? s
+    return `<!doctype html><html><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /></head><body>${body}</body></html>`
+  }
+  return ''
+}
+
 function extractCodeOrChart(text: string) {
-  // First: fenced code
-  const fence = text.match(/```(tsx|jsx|html|js|css|json)?\s*([\s\S]*?)```/)
-  if (!fence) return { kind: 'none' as const, lang: '', code: '', chart: null as ChartSpec | null }
+  const fence = text.match(/```([a-zA-Z0-9+.-]*)?\s*([\s\S]*?)```/)
+  if (fence) {
+    const rawLang = (fence[1] || '').toLowerCase()
+    const lang =
+      rawLang === '' ? 'text'
+      : /^(html|html\+tailwind|htm)$/.test(rawLang) ? 'html'
+      : /^(tsx|typescriptreact)$/.test(rawLang) ? 'tsx'
+      : /^(jsx|javascriptreact)$/.test(rawLang) ? 'jsx'
+      : /^(js|javascript|mjs|cjs)$/.test(rawLang) ? 'js'
+      : /^(css|scss|sass)$/.test(rawLang) ? 'css'
+      : /^(json)$/.test(rawLang) ? 'json'
+      : rawLang
 
-  const lang = (fence[1] || '').toLowerCase()
-  const body = fence[2] || ''
+    const body = fence[2] || ''
 
-  // Try chart JSON convention: { "chart": { type, data, options } }
-  if (lang === 'json') {
-    try {
-      const parsed = JSON.parse(body)
-      if (parsed && parsed.chart && parsed.chart.type && parsed.chart.data) {
-        return { kind: 'chart' as const, lang, code: '', chart: parsed.chart as ChartSpec }
+    if (lang === 'json') {
+      try {
+        const parsed = JSON.parse(body)
+        if (parsed && parsed.chart && parsed.chart.type && parsed.chart.data) {
+          return { kind: 'chart' as const, lang, code: '', chart: parsed.chart as ChartSpec }
+        }
+      } catch {
+        // treat as code below
       }
-    } catch {}
+    }
+
+    return { kind: 'code' as const, lang, code: body, chart: null as ChartSpec | null }
   }
 
-  return { kind: 'code' as const, lang, code: body, chart: null }
+  const loose = extractLooseHtml(text)
+  if (loose) {
+    return { kind: 'code' as const, lang: 'html', code: loose, chart: null }
+  }
+
+  return { kind: 'none' as const, lang: '', code: '', chart: null }
 }
 
 function toSrcDocForCode(lang: string, code: string) {
@@ -86,7 +117,6 @@ new Chart(ctx, {
 }
 
 function hashFor(text: string) {
-  // lightweight content hash to prevent re-open on same content
   const s = text || ''
   return `${s.length}:${s.slice(0, 64)}:${s.slice(-64)}`
 }
@@ -98,15 +128,11 @@ export default function AutoArtifactDock({ content, openHint }: Props) {
 
   const { kind, lang, code, chart } = useMemo(() => extractCodeOrChart(content), [content])
 
-  // Auto-open logic with "don’t reopen if dismissed for same content"
+  // Auto-open for any renderable content; respect dismissal for same content
   useEffect(() => {
-    const intent = /build|prototype|component|widget|landing\s?page|web\s?app|dashboard|frontend|chart|graph/i.test(
-      content
-    )
     const hasRenderable = (kind === 'chart' && chart) || (kind === 'code' && code)
     const h = hashFor(content)
-
-    if ((openHint || intent) && hasRenderable && !open && dismissedHashRef.current !== h) {
+    if ((openHint || hasRenderable) && !open && dismissedHashRef.current !== h) {
       setOpen(true)
     }
   }, [content, open, openHint, kind, code, chart])
