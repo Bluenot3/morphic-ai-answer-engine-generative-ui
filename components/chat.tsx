@@ -47,31 +47,15 @@ function isBuildIntent(t: string) {
 }
 
 const BUILD_OUTPUT_SPEC = `
-You are a code generator. When the user asks for an app, page, UI, component, or dashboard, return **only one** fenced code block, no commentary.
+You are a senior UI engineer. When asked for an app/page/ui, return **one fenced code block only**.
 
-Preferred formats (choose one based on user ask):
-- \`\`\`html
-...full standalone HTML (includes <style> & inline JS if needed)...
-\`\`\`
-- \`\`\`tsx
-...React component code (self-contained, renderable)...
-\`\`\`
-- \`\`\`jsx
-...React component code...
-\`\`\`
+- \`\`\`html ... full HTML with <style> + inline JS ... \`\`\`
+- \`\`\`tsx ... self-contained React component ... \`\`\`
 
-Rules:
-- Self-contained. Include minimal CSS (Tailwind-like classes are fine if used), or inline <style>.
-- Avoid external imports unless absolutely necessary; prefer pure HTML/JS/CSS.
-- If the user asks for charts, also include a fenced \`\`\`json\`\`\` block with:
-  {
-    "chart": { "type": "bar|line|pie|doughnut", "data": { ... }, "options": { ... } }
-  }
-  The viewer will auto-render Chart.js from this JSON.
-- If the user asks for a table or grid, you may include a fenced \`\`\`json\`\`\` block with:
-  { "table": { "columns": ["ColA","ColB",...], "rows": [ ["a","b"], ... ] } }
-
-Absolutely no prose outside the fenced code (or JSON) blocks.
+Quality: responsive, accessible, semantic, smooth transitions, glass/neuromorphic polish.
+If asked for charts: include fenced \`\`\`json\`\`\` with { "chart": { ... } }.
+If asked for table: { "table": { "columns": [...], "rows": [...] } }.
+No prose outside code fences.
 `
 // -------------- End Helpers --------------
 
@@ -120,7 +104,7 @@ export function Chat({
       toast.error(`Error in chat: ${error.message}`)
     },
     sendExtraMessageFields: false,
-    experimental_throttle: 100
+    experimental_throttle: 0 // flush tokens as soon as they stream
   })
 
   const isLoading = status === 'submitted' || status === 'streaming'
@@ -179,7 +163,6 @@ export function Chat({
 
   const handleUpdateAndReloadMessage = async (messageId: string, newContent: string) => {
     setMessages(curr => curr.map(msg => (msg.id === messageId ? { ...msg, content: newContent } : msg)))
-
     try {
       const idx = messages.findIndex(msg => msg.id === messageId)
       if (idx === -1) return
@@ -224,13 +207,8 @@ export function Chat({
   // -------- Artifact cleaning & feeding --------
   function cleanAssistantForArtifact(s: string): string {
     if (!s) return ''
-
     let out = s
-
-    // Drop echoed spec prelude up to the first code fence, keep the fence
     out = out.replace(/---\s*OUTPUT SPEC\s*---[\s\S]*?```/, '```')
-
-    // If raw HTML is present (even without fences), wrap it in ```html fences
     const hasHtml = /<!doctype html/i.test(out) || /<html[\s>]/i.test(out)
     if (hasHtml) {
       const alreadyFenced =
@@ -246,26 +224,16 @@ export function Chat({
         out = `${prefix}\n\`\`\`html\n${html}\n\`\`\`\n`
       }
     }
-
     return out.trim()
   }
 
-  // Latest assistant text (for Copy + Artifact)
-  const lastAssistant = useMemo(
-    () => [...messages].reverse().find(m => m.role === 'assistant'),
-    [messages]
-  )
+  const lastAssistant = useMemo(() => [...messages].reverse().find(m => m.role === 'assistant'), [messages])
   const lastAssistantTextRaw = contentToText(lastAssistant?.content)
   const lastAssistantText = cleanAssistantForArtifact(lastAssistantTextRaw)
 
-  // Latest user text (for dynamic chips)
-  const lastUser = useMemo(
-    () => [...messages].reverse().find(m => m.role === 'user'),
-    [messages]
-  )
+  const lastUser = useMemo(() => [...messages].reverse().find(m => m.role === 'user'), [messages])
   const lastUserText = contentToText(lastUser?.content)
 
-  // Normalize content that feeds the artifact dock
   const [artifactText, setArtifactText] = useState('')
   useEffect(() => {
     setArtifactText(lastAssistantText || '')
@@ -329,7 +297,7 @@ export function Chat({
         reload={handleReloadFrom}
       />
 
-      {/* Dynamic chips (based on lastUserText) */}
+      {/* Dynamic chips */}
       <div className="px-2">
         <QuickPrompts lastUserText={lastUserText} onPick={handleQuickPromptInsert} />
       </div>
@@ -350,7 +318,7 @@ export function Chat({
       />
 
       <div className="px-2">
-        <InputMetrics text={input || ''} model="openai/gpt-4o-mini" />
+        <InputMetrics text={input || ''} model="openai/gpt-4.1" />
       </div>
 
       <AutoArtifactDock content={artifactText} />
