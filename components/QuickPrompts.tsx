@@ -98,7 +98,7 @@ function suggestionsFor(text: string) {
     }
   }
 
-  // If no intent detected yet (e.g., first prompt), keep it pro & neutral.
+  // Neutral premium defaults
   return {
     primary: [
       'Give a concise executive summary',
