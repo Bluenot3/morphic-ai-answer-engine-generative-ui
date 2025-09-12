@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 
 type Props = { content: string; openHint?: boolean }
 
@@ -16,7 +18,9 @@ function extractLooseHtml(text: string) {
   const s = text || ''
   if (/<\s*!doctype/i.test(s) || /<\s*html/i.test(s)) {
     const start =
-      s.search(/<\s*!doctype/i) !== -1 ? s.search(/<\s*!doctype/i) : s.search(/<\s*html/i)
+      s.search(/<\s*!doctype/i) !== -1
+        ? s.search(/<\s*!doctype/i)
+        : s.search(/<\s*html/i)
     return s.slice(start)
   }
   if (/<\s*div[^>]*>[\s\S]*<\/\s*div>/.test(s)) {
@@ -31,14 +35,21 @@ function extractCodeOrChart(text: string) {
   if (fence) {
     const rawLang = (fence[1] || '').toLowerCase()
     const lang =
-      rawLang === '' ? 'text'
-      : /^(html|html\+tailwind|htm)$/.test(rawLang) ? 'html'
-      : /^(tsx|typescriptreact)$/.test(rawLang) ? 'tsx'
-      : /^(jsx|javascriptreact)$/.test(rawLang) ? 'jsx'
-      : /^(js|javascript|mjs|cjs)$/.test(rawLang) ? 'js'
-      : /^(css|scss|sass)$/.test(rawLang) ? 'css'
-      : /^(json)$/.test(rawLang) ? 'json'
-      : rawLang
+      rawLang === ''
+        ? 'text'
+        : /^(html|html\+tailwind|htm)$/.test(rawLang)
+          ? 'html'
+          : /^(tsx|typescriptreact)$/.test(rawLang)
+            ? 'tsx'
+            : /^(jsx|javascriptreact)$/.test(rawLang)
+              ? 'jsx'
+              : /^(js|javascript|mjs|cjs)$/.test(rawLang)
+                ? 'js'
+                : /^(css|scss|sass)$/.test(rawLang)
+                  ? 'css'
+                  : /^(json)$/.test(rawLang)
+                    ? 'json'
+                    : rawLang
 
     const body = fence[2] || ''
 
@@ -46,14 +57,24 @@ function extractCodeOrChart(text: string) {
       try {
         const parsed = JSON.parse(body)
         if (parsed?.chart?.type && parsed?.chart?.data) {
-          return { kind: 'chart' as const, lang, code: '', chart: parsed.chart as ChartSpec }
+          return {
+            kind: 'chart' as const,
+            lang,
+            code: '',
+            chart: parsed.chart as ChartSpec
+          }
         }
       } catch {
         // treat as code
       }
     }
 
-    return { kind: 'code' as const, lang, code: body, chart: null as ChartSpec | null }
+    return {
+      kind: 'code' as const,
+      lang,
+      code: body,
+      chart: null as ChartSpec | null
+    }
   }
 
   const loose = extractLooseHtml(text)
@@ -126,12 +147,20 @@ export default function AutoArtifactDock({ content, openHint }: Props) {
   const [isLoading, setIsLoading] = useState(true)
   const dismissedHashRef = useRef<string>('')
 
-  const { kind, lang, code, chart } = useMemo(() => extractCodeOrChart(content), [content])
+  const { kind, lang, code, chart } = useMemo(
+    () => extractCodeOrChart(content),
+    [content]
+  )
 
   useEffect(() => {
-    const hasRenderable = (kind === 'chart' && chart) || (kind === 'code' && code)
+    const hasRenderable =
+      (kind === 'chart' && chart) || (kind === 'code' && code)
     const h = hashFor(content)
-    if ((openHint || hasRenderable) && !open && dismissedHashRef.current !== h) {
+    if (
+      (openHint || hasRenderable) &&
+      !open &&
+      dismissedHashRef.current !== h
+    ) {
       setOpen(true)
       setActiveTab('preview')
       setIsLoading(true)
@@ -152,44 +181,61 @@ export default function AutoArtifactDock({ content, openHint }: Props) {
   if (!open) return null
   if (!(kind === 'chart' ? chart : code)) return null
 
-  const srcDoc = kind === 'chart' && chart ? toSrcDocForChart(chart) : toSrcDocForCode(lang, code)
+  const srcDoc =
+    kind === 'chart' && chart
+      ? toSrcDocForChart(chart)
+      : toSrcDocForCode(lang, code)
 
   return (
     <aside
       className="
         fixed right-0 top-0 z-40 h-full w-full max-w-[820px]
-        border-l border-white/10
-        bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))]
-        backdrop-blur-2xl
-        shadow-[0_0_120px_rgba(16,185,129,0.20)]
+        border-l border-white/20
+        bg-white/10
+        backdrop-blur-3xl
+        shadow-[0_0_120px_rgba(16,185,129,0.30)]
       "
     >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-        <div className="flex items-center gap-3 text-xs text-white/80">Artifact — {kind}</div>
+        <div className="flex items-center gap-3 text-xs text-white/80">
+          Artifact — {kind}
+        </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setActiveTab('preview')} className="px-2 py-1 text-xs">Preview</button>
-          <button onClick={() => setActiveTab('code')} className="px-2 py-1 text-xs">Code</button>
-          <button
+          <Button size="sm" onClick={() => setActiveTab('preview')}>
+            Preview
+          </Button>
+          <Button size="sm" onClick={() => setActiveTab('code')}>
+            Code
+          </Button>
+          <Button
+            size="sm"
             onClick={() => {
               dismissedHashRef.current = hashFor(content)
               setOpen(false)
             }}
-            className="px-2 py-1 text-xs"
           >
             Close
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Loading bar */}
       {isLoading && (
         <div className="relative h-1.5 w-full bg-white/5">
-          <div className="h-full bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500" style={{ width: `${progress}%` }} />
+          <div
+            className="h-full bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500"
+            style={{ width: `${progress}%` }}
+          />
         </div>
       )}
 
       <div className="relative h-[calc(100%-92px)]">
+        {isLoading && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+            <Spinner className="h-8 w-8 text-emerald-300" />
+          </div>
+        )}
         {activeTab === 'preview' ? (
           <iframe
             className={`h-full w-full border-0 transition-opacity duration-300 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
@@ -201,8 +247,10 @@ export default function AutoArtifactDock({ content, openHint }: Props) {
             }}
           />
         ) : (
-          <pre className="h-full overflow-auto bg-black/80 p-4 text-emerald-200 text-xs">
-            <code>{kind === 'chart' ? JSON.stringify({ chart }, null, 2) : code}</code>
+          <pre className="h-full overflow-auto rounded-xl bg-black/60 p-4 text-emerald-200 text-xs backdrop-blur-sm">
+            <code>
+              {kind === 'chart' ? JSON.stringify({ chart }, null, 2) : code}
+            </code>
           </pre>
         )}
       </div>
