@@ -13,6 +13,7 @@ import AppSidebar from '@/components/app-sidebar'
 import ArtifactRoot from '@/components/artifact/artifact-root'
 import Header from '@/components/header'
 import { ThemeProvider } from '@/components/theme-provider'
+import CommandPalette from '@/components/CommandPalette'
 
 import './globals.css'
 
@@ -76,7 +77,6 @@ export default async function RootLayout({
       <body
         className={cn(
           'min-h-screen flex flex-col font-sans antialiased',
-          // Cinematic gradient + crisp white text + emerald selection highlight
           'bg-gradient-to-b from-black via-slate-950 to-black text-white selection:bg-emerald-500/30 selection:text-white',
           fontSans.variable,
         )}
@@ -100,23 +100,23 @@ export default async function RootLayout({
           <SidebarProvider defaultOpen>
             <AppSidebar />
 
-            {/* ===== Fixed Header (no overlap) ===== */}
+            {/* Fixed header (no overlap) */}
             <div
               className="fixed left-0 right-0 z-50 glass-header"
               style={{ top: 'var(--safe-top, 0)', height: 'var(--header-h)' }}
               role="banner"
             >
-              {/* Your header component; it can render its own internals freely */}
               <Header user={user} />
             </div>
 
-            {/* ===== Page Content =====
-                data-avoid-overlap hooks into globals.css so content starts below the fixed header/safe areas */}
-            <div className="flex flex-col flex-1">
-              <main className="flex flex-1 min-h-0" data-avoid-overlap="true">
-                <ArtifactRoot>{children}</ArtifactRoot>
-              </main>
-            </div>
+            {/* Wrap content with the command palette so ⌘K / Ctrl-K works everywhere */}
+            <CommandPalette>
+              <div className="flex flex-col flex-1">
+                <main className="flex flex-1 min-h-0" data-avoid-overlap="true">
+                  <ArtifactRoot>{children}</ArtifactRoot>
+                </main>
+              </div>
+            </CommandPalette>
           </SidebarProvider>
 
           <Toaster />
