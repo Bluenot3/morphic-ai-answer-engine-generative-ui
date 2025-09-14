@@ -22,7 +22,7 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
     <header
       className={cn(
         // liquid-glass header (uses your globals.css helpers)
-        'glass-header px-4 py-2 flex items-center justify-between transition-[width] duration-200 ease-linear',
+        'glass-header z-30 px-4 py-2 flex items-center justify-between transition-[width] duration-200 ease-linear',
         open ? 'md:w-[calc(100%-var(--sidebar-width))]' : 'md:w-full',
         'w-full'
       )}
@@ -49,15 +49,15 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
 
       {/* Right: capability chips + auth menu */}
       <div className="flex items-center gap-4">
-        {/* Capability chips */}
-        <div className="flex items-center gap-2 overflow-x-auto max-w-[50vw] md:max-w-none md:overflow-visible">
-          <span className="chip whitespace-nowrap">Multi-Model</span>
-          <span className="chip whitespace-nowrap">Search-Grounded</span>
-          <span className="chip whitespace-nowrap">Edge Streaming</span>
+        {/* liquid-glass chips (hidden on small screens) */}
+        <div className="hidden md:flex items-center gap-2">
+          <span className="chip">Multi-Model</span>
+          <span className="chip">Search-Grounded</span>
+          <span className="chip">Edge Streaming</span>
         </div>
 
-        {/* Auth menus */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Auth menus (unchanged) */}
+        <div className="flex items-center gap-2">
           {user ? <UserMenu user={user} /> : <GuestMenu />}
         </div>
       </div>
