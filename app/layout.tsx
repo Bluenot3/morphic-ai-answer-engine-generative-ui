@@ -13,7 +13,6 @@ import AppSidebar from '@/components/app-sidebar'
 import ArtifactRoot from '@/components/artifact/artifact-root'
 import Header from '@/components/header'
 import { ThemeProvider } from '@/components/theme-provider'
-import CommandPalette from '@/components/CommandPalette'
 
 import './globals.css'
 
@@ -44,7 +43,6 @@ export const metadata: Metadata = {
     description,
     card: 'summary_large_image',
     images: ['/ZENAI.png'],
-    // creator: '@zenai'
   },
   icons: { icon: '/favicon.ico' },
 }
@@ -81,7 +79,7 @@ export default async function RootLayout({
           fontSans.variable,
         )}
       >
-        {/* Ambient glow background (purely visual) */}
+        {/* Ambient glow background (visual only) */}
         <div
           aria-hidden
           className="pointer-events-none fixed inset-0 -z-10 [background-image:radial-gradient(50%_40%_at_50%_0%,rgba(16,185,129,0.20),transparent_60%)]"
@@ -100,23 +98,14 @@ export default async function RootLayout({
           <SidebarProvider defaultOpen>
             <AppSidebar />
 
-            {/* Fixed header (no overlap) */}
-            <div
-              className="fixed left-0 right-0 z-50 glass-header"
-              style={{ top: 'var(--safe-top, 0)', height: 'var(--header-h)' }}
-              role="banner"
-            >
-              <Header user={user} />
-            </div>
+            {/* Header is fixed via its own component */}
+            <Header user={user} />
 
-            {/* Wrap content with the command palette so ⌘K / Ctrl-K works everywhere */}
-            <CommandPalette>
-              <div className="flex flex-col flex-1">
-                <main className="flex flex-1 min-h-0" data-avoid-overlap="true">
-                  <ArtifactRoot>{children}</ArtifactRoot>
-                </main>
-              </div>
-            </CommandPalette>
+            <div className="flex flex-col flex-1">
+              <main className="flex flex-1 min-h-0" data-avoid-overlap="true">
+                <ArtifactRoot>{children}</ArtifactRoot>
+              </main>
+            </div>
           </SidebarProvider>
 
           <Toaster />
