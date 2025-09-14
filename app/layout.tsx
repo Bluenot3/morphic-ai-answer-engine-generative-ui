@@ -1,6 +1,6 @@
+// app/layout.tsx
 import type { Metadata, Viewport } from 'next'
 import { Inter as FontSans } from 'next/font/google'
-
 import { Analytics } from '@vercel/analytics/next'
 
 import { createClient } from '@/lib/supabase/server'
@@ -27,7 +27,6 @@ const description =
   'Search-grounded, multi-model AI answers. Built on Vercel AI, tuned for ZEN.'
 
 export const metadata: Metadata = {
-  // Update to your live domain if different
   metadataBase: new URL('https://arena.zenai.world'),
   title,
   description,
@@ -36,10 +35,7 @@ export const metadata: Metadata = {
     description,
     url: 'https://arena.zenai.world',
     siteName: 'ZEN Edge',
-    images: [
-      // Use your uploaded asset from /public
-      { url: '/ZENAI.png', width: 1200, height: 630, alt: 'ZEN Edge' },
-    ],
+    images: [{ url: '/ZENAI.png', width: 1200, height: 630, alt: 'ZEN Edge' }],
     type: 'website',
   },
   twitter: {
@@ -47,9 +43,9 @@ export const metadata: Metadata = {
     description,
     card: 'summary_large_image',
     images: ['/ZENAI.png'],
-    // creator: '@zenai' // optional: set your handle
+    // creator: '@zenai'
   },
-  icons: { icon: '/favicon.ico' }, // safe if you have one; otherwise remove
+  icons: { icon: '/favicon.ico' },
 }
 
 export const viewport: Viewport = {
@@ -57,15 +53,12 @@ export const viewport: Viewport = {
   initialScale: 1,
   minimumScale: 1,
   maximumScale: 1,
-  // Next.js 15: themeColor belongs in viewport (not metadata)
   themeColor: '#10B981', // ZEN emerald
 }
 
 export default async function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   let user = null
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -83,13 +76,12 @@ export default async function RootLayout({
       <body
         className={cn(
           'min-h-screen flex flex-col font-sans antialiased',
-          // Powerful, state-of-the-art but non-breaking global look:
-          // cinematic gradient + crisp white text + emerald selection highlight
+          // Cinematic gradient + crisp white text + emerald selection highlight
           'bg-gradient-to-b from-black via-slate-950 to-black text-white selection:bg-emerald-500/30 selection:text-white',
           fontSans.variable,
         )}
       >
-        {/* Subtle ambient effects (purely visual; won’t touch layout) */}
+        {/* Ambient glow background (purely visual) */}
         <div
           aria-hidden
           className="pointer-events-none fixed inset-0 -z-10 [background-image:radial-gradient(50%_40%_at_50%_0%,rgba(16,185,129,0.20),transparent_60%)]"
@@ -107,13 +99,26 @@ export default async function RootLayout({
         >
           <SidebarProvider defaultOpen>
             <AppSidebar />
-            <div className="flex flex-col flex-1">
+
+            {/* ===== Fixed Header (no overlap) ===== */}
+            <div
+              className="fixed left-0 right-0 z-50 glass-header"
+              style={{ top: 'var(--safe-top, 0)', height: 'var(--header-h)' }}
+              role="banner"
+            >
+              {/* Your header component; it can render its own internals freely */}
               <Header user={user} />
-              <main className="flex flex-1 min-h-0">
+            </div>
+
+            {/* ===== Page Content =====
+                data-avoid-overlap hooks into globals.css so content starts below the fixed header/safe areas */}
+            <div className="flex flex-col flex-1">
+              <main className="flex flex-1 min-h-0" data-avoid-overlap="true">
                 <ArtifactRoot>{children}</ArtifactRoot>
               </main>
             </div>
           </SidebarProvider>
+
           <Toaster />
           <Analytics />
         </ThemeProvider>
