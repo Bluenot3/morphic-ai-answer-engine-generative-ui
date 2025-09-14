@@ -138,7 +138,7 @@
     @apply rounded-2xl border border-white/10 bg-white/5 backdrop-blur;
   }
   .glass-header {
-    @apply sticky top-0 z-50 backdrop-blur bg-black/40 border-b border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.15)];
+    @apply sticky top-0 z-30 backdrop-blur bg-black/30 border-b border-white/10;
   }
   .chip {
     @apply rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] text-emerald-300 uppercase tracking-wide;

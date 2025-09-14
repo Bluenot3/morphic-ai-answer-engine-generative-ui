@@ -99,6 +99,13 @@ export default async function RootLayout({
           className="pointer-events-none fixed inset-0 -z-10 [mask-image:radial-gradient(50%_50%_at_50%_50%,black,transparent)]"
         />
 
+        {/* Tasteful capability badge (can remove anytime) */}
+        <div className="pointer-events-none fixed inset-x-0 top-0 z-40 flex justify-center">
+          <div className="pointer-events-auto mt-4 rounded-full border border-emerald-500/30 bg-black/60 px-3 py-1 text-[11px] uppercase tracking-wide text-emerald-300 backdrop-blur">
+            ZEN Edge • Multi-Model • Search-Grounded • Edge Streaming
+          </div>
+        </div>
+
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
