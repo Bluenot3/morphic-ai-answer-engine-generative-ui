@@ -1,7 +1,9 @@
+/* app/globals.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ================= Base Theme (Light/Dark) ================= */
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -52,6 +54,9 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* ====== Layout Safety Vars ====== */
+    --header-h: 64px; /* adjust if your header is taller */
   }
 
   .dark {
@@ -102,14 +107,19 @@
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
-}
 
-@layer base {
+  /* Respect iOS/Android safe areas so banners don’t hide under notches */
+  @supports (padding-top: env(safe-area-inset-top)) {
+    :root {
+      --safe-top: calc(env(safe-area-inset-top));
+    }
+  }
+
   * {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
   }
 
   /* Global text selection highlight (ZEN emerald) */
@@ -119,9 +129,22 @@
   }
 }
 
-/* ========= ZEN Edge Enhancements ========= */
+/* ================= Layout Safety Helpers ================= */
+/* Top-of-screen banner that sits above header */
+.z-top-banner {
+  position: fixed;
+  top: var(--safe-top, 0);
+  left: 0;
+  right: 0;
+  z-index: 60; /* above header */
+}
 
-/* Glowing Z logo */
+/* Ensure tiles/grids never slip under fixed header/banners */
+main[data-avoid-overlap="true"] {
+  padding-top: calc(var(--header-h) + var(--safe-top, 0));
+}
+
+/* ================= ZEN Edge Enhancements ================= */
 @keyframes zenGlow {
   0%   { filter: drop-shadow(0 0 6px rgba(16,185,129,.45)); }
   50%  { filter: drop-shadow(0 0 16px rgba(16,185,129,.90)); }
@@ -132,7 +155,7 @@
   will-change: filter;
 }
 
-/* Optional: reusable glass surfaces for panels/cards/headers */
+/* ================= Reusable Components ================= */
 @layer components {
   .glass-surface {
     @apply rounded-2xl border border-white/10 bg-white/5 backdrop-blur;
