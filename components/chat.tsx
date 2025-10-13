@@ -2,13 +2,14 @@
 
 /* eslint-disable simple-import-sort/imports */
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { ChatRequestOptions } from 'ai'
 import type { Message } from 'ai/react'
 import { useChat } from '@ai-sdk/react'
 import { toast } from 'sonner'
 
+import ActionBar from '@/components/ActionBar'
 import AutoArtifactDock from '@/components/artifact/auto-artifact-dock'
 import CopyAnswer from '@/components/CopyAnswer'
 import InputMetrics from '@/components/InputMetrics'
@@ -16,7 +17,8 @@ import QuickPrompts from '@/components/QuickPrompts'
 import RerunWithModel from '@/components/RerunWithModel'
 import { CHAT_ID } from '@/lib/constants'
 import type { Model } from '@/lib/types/models'
-import { cn } from '@/lib/utils'
+import { cn, createModelId } from '@/lib/utils'
+import { getCookie, setCookie } from '@/lib/utils/cookies'
 
 import { ChatMessages } from './chat-messages'
 import { ChatPanel } from './chat-panel'
@@ -78,6 +80,8 @@ export function Chat({
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [isAtBottom, setIsAtBottom] = useState(true)
+  const [isWebEnabled, setIsWebEnabled] = useState(true)
+  const [selectedModelId, setSelectedModelId] = useState('')
 
   const {
     messages,
@@ -241,25 +245,11 @@ export function Chat({
   // --------------------------------------------
 
   // Re-run with another model via cookie + resend last user
-  function setSelectedModelCookie(modelId: string) {
-    try {
-      const payload = {
-        id: modelId,
-        name: modelId,
-        provider: '',
-        providerId: '',
-        enabled: true,
-        toolCallType: 'native'
-      }
-      document.cookie = `selectedModel=${encodeURIComponent(JSON.stringify(payload))}; path=/; max-age=86400`
-    } catch {}
-  }
-
   function rerunLastUserWithModel(modelId: string) {
     const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')
     const content = contentToText(lastUserMsg?.content)
     if (!content) return
-    setSelectedModelCookie(modelId)
+    applySelectedModel(modelId)
     append({ role: 'user', content })
   }
 
@@ -268,10 +258,158 @@ export function Chat({
     handleInputChange({ target: { value: next } } as unknown as React.ChangeEvent<HTMLInputElement>)
   }
 
+  const transcript = useMemo(() => {
+    if (!messages.length) return ''
+    return messages
+      .map(message => {
+        const speaker = message.role === 'user' ? 'You' : 'ZEN Edge'
+        const body = contentToText(message.content)
+        return body ? `${speaker}:\n${body}` : ''
+      })
+      .filter(Boolean)
+      .join('\n\n')
+      .trim()
+  }, [messages])
+
+  const normalizedModels = useMemo(
+    () =>
+      (models || [])
+        .filter(model => model.enabled)
+        .map(model => ({ id: createModelId(model), label: model.name })),
+    [models]
+  )
+
+  const applySelectedModel = useCallback(
+    (modelId: string) => {
+      if (!models?.length) return
+      const target = models.find(model => createModelId(model) === modelId)
+      if (!target) return
+
+      setSelectedModelId(modelId)
+      try {
+        setCookie('selectedModel', JSON.stringify(target))
+      } catch (error) {
+        console.warn('Unable to persist selected model', error)
+      }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('zen:model-changed', {
+            detail: { id: modelId, model: target }
+          })
+        )
+      }
+    },
+    [models]
+  )
+
+  const handleModelSwitch = useCallback(
+    (modelId: string) => {
+      applySelectedModel(modelId)
+      if (messages.some(message => message.role === 'user')) {
+        rerunLastUserWithModel(modelId)
+      }
+    },
+    [applySelectedModel, messages]
+  )
+
+  const applyWebToggle = useCallback(
+    (enabled: boolean, emit = true) => {
+      setIsWebEnabled(enabled)
+      if (emit) {
+        try {
+          setCookie('search-mode', enabled.toString())
+        } catch (error) {
+          console.warn('Unable to persist search mode', error)
+        }
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('zen:search-mode-changed', {
+              detail: { enabled }
+            })
+          )
+        }
+      }
+    },
+    []
+  )
+
+  const handleResetConversation = useCallback(() => {
+    stop()
+    setMessages([])
+    setData(undefined)
+    setArtifactText('')
+    setIsAtBottom(true)
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, '', '/')
+      window.dispatchEvent(new CustomEvent('chat-history-updated'))
+    }
+  }, [setMessages, setData, stop])
+
+  useEffect(() => {
+    if (!models?.length) return
+
+    let targetId: string | null = null
+    const stored = getCookie('selectedModel')
+
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored)
+        if (parsed?.id && parsed?.providerId) {
+          targetId = `${parsed.providerId}:${parsed.id}`
+        }
+      } catch (error) {
+        console.warn('Failed to parse stored model', error)
+      }
+    }
+
+    if (!targetId) {
+      const firstEnabled = models.find(model => model.enabled) ?? models[0]
+      if (firstEnabled) {
+        targetId = createModelId(firstEnabled)
+      }
+    }
+
+    if (targetId && targetId !== selectedModelId) {
+      applySelectedModel(targetId)
+    } else if (targetId && !selectedModelId) {
+      setSelectedModelId(targetId)
+    }
+  }, [models, selectedModelId, applySelectedModel])
+
+  useEffect(() => {
+    const stored = getCookie('search-mode')
+    if (stored === null) {
+      applyWebToggle(true, false)
+      setCookie('search-mode', 'true')
+    } else {
+      applyWebToggle(stored === 'true', false)
+    }
+
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ enabled: boolean }>).detail
+      if (detail && typeof detail.enabled === 'boolean') {
+        applyWebToggle(detail.enabled, false)
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('zen:search-mode-changed', handler as EventListener)
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener(
+          'zen:search-mode-changed',
+          handler as EventListener
+        )
+      }
+    }
+  }, [applyWebToggle])
+
   return (
     <div
       className={cn(
-        'relative flex h-full min-w-0 flex-1 flex-col',
+        'relative flex h-full min-w-0 flex-1 flex-col pb-40',
         messages.length === 0 ? 'items-center justify-center' : ''
       )}
       data-testid="full-chat"
@@ -322,6 +460,17 @@ export function Chat({
       </div>
 
       <AutoArtifactDock content={artifactText} />
+
+      <ActionBar
+        transcript={transcript}
+        hasConversation={messages.length > 0}
+        currentModelId={selectedModelId}
+        models={normalizedModels}
+        isWebEnabled={isWebEnabled}
+        onToggleWeb={enabled => applyWebToggle(enabled)}
+        onReset={handleResetConversation}
+        onModelSwitch={handleModelSwitch}
+      />
     </div>
   )
 }

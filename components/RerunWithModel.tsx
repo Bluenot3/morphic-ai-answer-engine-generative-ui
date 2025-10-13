@@ -1,6 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { Sparkles } from 'lucide-react'
+
+import { Button } from './ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from './ui/dropdown-menu'
 
 const MODELS = [
   { id: 'openai/gpt-4o-mini', label: 'GPT-4o mini' },
@@ -14,35 +22,25 @@ export default function RerunWithModel({
 }: {
   onRun: (model: string) => void
 }) {
-  const [open, setOpen] = useState(false)
-
   return (
-    <div className="relative">
-      <button
-        className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-xs hover:bg-white/10"
-        onClick={() => setOpen(o => !o)}
-        title="Re-run with another model"
-        type="button"
-      >
-        Re-run
-      </button>
-      {open && (
-        <div className="absolute right-0 z-20 mt-1 w-48 rounded-lg border border-white/10 bg-black/80 p-1 backdrop-blur">
-          {MODELS.map(m => (
-            <button
-              key={m.id}
-              className="w-full rounded-md px-2 py-1 text-left text-xs hover:bg-white/10"
-              onClick={() => {
-                setOpen(false)
-                onRun(m.id)
-              }}
-              type="button"
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          size="sm"
+          variant="outline"
+          className="rounded-full border-white/20 bg-black/30 text-xs text-white/80 hover:bg-white/10"
+        >
+          <Sparkles className="mr-2 size-3.5 text-emerald-300" aria-hidden />
+          Rerun
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        {MODELS.map(model => (
+          <DropdownMenuItem key={model.id} onSelect={() => onRun(model.id)}>
+            {model.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

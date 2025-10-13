@@ -56,6 +56,22 @@ export function ModelSelector({ models }: ModelSelectorProps) {
         console.error('Failed to parse saved model:', e)
       }
     }
+    const handleModelEvent = (event: Event) => {
+      const detail = (event as CustomEvent<{ id?: string }>).detail
+      if (detail?.id) {
+        setValue(detail.id)
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('zen:model-changed', handleModelEvent as EventListener)
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('zen:model-changed', handleModelEvent as EventListener)
+      }
+    }
   }, [])
 
   const handleModelSelect = (id: string) => {

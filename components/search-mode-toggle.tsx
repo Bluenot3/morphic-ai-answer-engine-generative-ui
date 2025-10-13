@@ -19,11 +19,38 @@ export function SearchModeToggle() {
     } else {
       setCookie('search-mode', 'true')
     }
+
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ enabled: boolean }>).detail
+      if (detail && typeof detail.enabled === 'boolean') {
+        setIsSearchMode(detail.enabled)
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('zen:search-mode-changed', handler as EventListener)
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener(
+          'zen:search-mode-changed',
+          handler as EventListener
+        )
+      }
+    }
   }, [])
 
   const handleSearchModeChange = (pressed: boolean) => {
     setIsSearchMode(pressed)
     setCookie('search-mode', pressed.toString())
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('zen:search-mode-changed', {
+          detail: { enabled: pressed }
+        })
+      )
+    }
   }
 
   return (

@@ -194,7 +194,12 @@ export default function AutoArtifactDock({ content, openHint }: Props) {
         bg-white/10
         backdrop-blur-3xl
         shadow-[0_0_120px_rgba(16,185,129,0.30)]
+        md:rounded-l-3xl md:border-l-0 md:border-t md:border-white/10
       "
+      style={{
+        top: 'calc(var(--safe-top, 0px) + var(--header-h))',
+        height: 'calc(100vh - var(--safe-top, 0px) - var(--header-h))'
+      }}
     >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
